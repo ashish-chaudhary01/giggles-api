@@ -10,6 +10,8 @@ import dns from "dns";
 dns.setServers(["0.0.0.0", "8.8.8.8"]);
 
 const app = express();
+
+// middlewares
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan("dev"));
@@ -32,7 +34,7 @@ app.use("/api/health", (req, res) => {
 });
 
 // routes
-app.use("/api/auth", authRoutes);
+app.use("/api/v1/auth", authRoutes);
 
 // http server
 const server = http.createServer(app);
