@@ -1,7 +1,6 @@
 import userModel from "../models/user.model.js";
 import bcrypt from "bcryptjs";
-import config from "../config/config.js";
-import jwt from "jsonwebtoken";
+import { generateToken } from "../utils/generateToken.js";
 
 export async function signup(req, res) {
   try {
@@ -21,12 +20,11 @@ export async function signup(req, res) {
       fullName,
     });
 
-    const token = jwt.sign({ id: user._id }, config.jwtSecret);
+    generateToken(user._id, res);
 
     return res.status(201).json({
       success: true,
-      message: "User created successfully",
-      token,
+      message: "User signed up successfully",
       user,
     });
   } catch (error) {
@@ -53,12 +51,11 @@ export async function login(req, res) {
     }
 
     // generating token
-    const newToken = jwt.sign({ id: user._id }, config.jwtSecret);
+    generateToken(user._id, res);
 
     return res.status(200).json({
       success: true,
       message: "User logged in successfully",
-      token: newToken,
       user,
     });
   } catch (error) {
