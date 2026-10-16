@@ -11,24 +11,64 @@ export async function signup(req, res) {
         message: "All fields are required",
       });
     }
+
+    if (password.length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters" });
+    }
+
+    if (username.length < 3) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 3 characters" });
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Username can only contain letters, numbers, and underscores",
+        });
+    }
+
+    const existingUser = await userModel.find({
+      $or: [{ username }, { email }],
+    });
+
+    if (existingUser) {
+      if (existingUser.email === email) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+      if (existingUser.username === username) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+    }
+
     // hash the password
-    const hash = await bcrypt.hash(password, 10);
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(password, salt);
+
     const user = await userModel.create({
       username,
       email,
       password: hash,
       fullName,
     });
-
-    generateToken(user._id, res);
-
-    return res.status(201).json({
-      success: true,
-      message: "User signed up successfully",
-      user,
-    });
+    if (user) {
+      generateToken(user._id, res);
+      res.status(201).json({
+        success: true,
+        message: "User signed up successfully",
+        user,
+      });
+    } else {
+      res.status(400).json({ message: "Invalid user data" });
+    }
   } catch (error) {
-    console.log(error);
+    console.log("Error in signup controller", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 }
 
