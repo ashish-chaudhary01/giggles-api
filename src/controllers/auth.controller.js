@@ -17,7 +17,7 @@ export async function signup(req, res) {
     const user = await userModel.create({
       username,
       email,
-      pasword: hash,
+      password: hash,
       fullName,
     });
 
@@ -38,13 +38,16 @@ export async function login(req, res) {
   try {
     const { username, email, password } = req.body;
     const user = await userModel.findOne({
-      $or: [{ username: username }, { email: email }],
+      $or: [{ username }, { email }],
     });
+
+    // check if user exist or not
     if (!user) {
       return res.status(404).json({ message: "Invalid credentials" });
     }
+
     // verify password
-    const isPasswordValid = await bcrypt.compare(user.password, password);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(404).json({ message: "Invalid credentials" });
     }
@@ -62,3 +65,7 @@ export async function login(req, res) {
     console.log(error.message);
   }
 }
+
+// TODO
+// change password
+// forgot password
