@@ -1,5 +1,6 @@
 import express from "express";
 import * as authControllers from "../controllers/auth.controller.js";
+import { protectRoute } from "../middlewares/protectRoute.js";
 
 const router = express.Router();
 
@@ -8,5 +9,10 @@ router.post("/signup", authControllers.signup);
 
 // login route
 router.post("/login", authControllers.login);
+
+// check if the user is authenticated
+router.get("/check", protectRoute, (req, res) =>
+  res.status(200).json(req.user),
+);
 
 export default router;

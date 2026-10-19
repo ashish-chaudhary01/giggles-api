@@ -7,7 +7,7 @@ export function generateToken(userId, res) {
   });
 
   res.cookie("jwt", token, {
-    maxAge: 15 * 24 * 60 * 60 * 1000,
+    maxAge: 15 * 24 * 60 * 60 * 1000, // in ms
     httpOnly: true,
     sameSite: config.nodeEnv === "production" ? "none" : "strict",
     secure: config.nodeEnv === "production",
