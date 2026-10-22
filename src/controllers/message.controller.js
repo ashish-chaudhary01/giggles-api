@@ -1,3 +1,4 @@
+import { getReceiverSocketId, io } from "../lib/socket.js";
 import messageModel from "../models/message.model.js";
 import userModel from "../models/user.model.js";
 
@@ -63,9 +64,28 @@ export async function sendMessage(req, res) {
       senderId: senderId,
       text,
       image,
+      status: "sent",
     });
 
-    // todo : message in real time if user is online
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    // if the user is online
+    if (receiverSocketId) {
+      // update the status to delivered
+      newMessage.status = "delivered";
+      await newMessage.save();
+
+      // send message to the receiver instanly
+      io.to(receiverSocketId).emit("newMessage", newMessage);
+
+      // send the delivery status back to sender
+      const senderSocketId = getReceiverSocketId(senderId);
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("messageDelivered", {
+          messageId: newMessage._id,
+          status: "delivered",
+        });
+      }
+    }
 
     res.status(201).json(newMessage);
   } catch (error) {
