@@ -1,6 +1,7 @@
 import userModel from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../utils/generateToken.js";
+import cloudinary from "../lib/cloudinary.js";
 
 export async function signup(req, res) {
   try {
@@ -25,12 +26,9 @@ export async function signup(req, res) {
     }
 
     if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Username can only contain letters, numbers, and underscores",
-        });
+      return res.status(400).json({
+        message: "Username can only contain letters, numbers, and underscores",
+      });
     }
 
     const existingUser = await userModel.find({
@@ -103,6 +101,55 @@ export async function login(req, res) {
   }
 }
 
-// TODO
-// change password
-// forgot password
+export async function logout(req, res) {
+  try {
+    res
+      .clearCookie("jwt")
+      .status(200)
+      .json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.log("Error in logout controller", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function updateProfile(req, res) {
+  try {
+    const { fullName, username, profilePic, bio } = req.body;
+    const userId = req.user._id;
+
+    let updateData = {};
+
+    if (fullName) {
+      updateData.fullName = fullName;
+    }
+    if (bio) {
+      updateData.bio = bio;
+    }
+    if (username) {
+      // check if the username already exist
+      const existingUser = await userModel.findOne({ username: username });
+
+      if (existingUser) {
+        return res.status(409).json({ message: "Username already exist!" });
+      }
+
+      updateData.username = username;
+    }
+
+    if (profilePic) {
+      const uploadResponse = await cloudinary.uploader.upload(profilePic);
+      updateData.profilePic = uploadResponse.secure_url;
+    }
+
+    const updatedUser = await userModel.findByIdAndUpdate(userId, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    console.log("Error in updateProfile controller");
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
