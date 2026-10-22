@@ -17,6 +17,7 @@ const messageSchema = new mongoose.Schema(
     },
     image: {
       type: String,
+      default: "",
     },
     status: {
       type: String,
