@@ -1,3 +1,4 @@
+import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 import messageModel from "../models/message.model.js";
 import userModel from "../models/user.model.js";
@@ -54,16 +55,22 @@ export async function getMessagesByUserId(req, res) {
 
 export async function sendMessage(req, res) {
   try {
-    const { text = "", image = "" } = req.body;
+    const { text = "", image } = req.body;
     const { receiverId } = req.params;
     const senderId = req.user._id;
 
-    // TODO: if image then upload it to imageKit or cloudinary
+    let imageUrl;
+
+    if (image) {
+      const uploadResponse = await cloudinary.uploader.upload(image);
+      imageUrl = uploadResponse.secure_url;
+    }
+
     const newMessage = await messageModel.create({
       receiverId: receiverId,
       senderId: senderId,
       text,
-      image,
+      image: imageUrl,
       status: "sent",
     });
 
