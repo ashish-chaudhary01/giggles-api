@@ -7,6 +7,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import authRoutes from "./src/routes/auth.route.js";
 import messageRoutes from "./src/routes/message.routes.js";
+import userRoutes from "./src/routes/user.route.js";
 
 // set dns for database
 import dns from "dns";
@@ -37,6 +38,7 @@ app.use("/api/health", (req, res) => {
 // routes
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/message", messageRoutes);
+app.use("/api/v1/user", userRoutes);
 
 server.listen(config.port, (req, res) => {
   console.log(`Server is running on port ${config.port}`);
