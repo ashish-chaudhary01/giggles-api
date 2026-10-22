@@ -68,16 +68,16 @@ export async function sendMessage(req, res) {
     });
 
     const receiverSocketId = getReceiverSocketId(receiverId);
-    // if the user is online
+    // if receiver is online
     if (receiverSocketId) {
-      // update the status to delivered
+      // mark the status as delivered
       newMessage.status = "delivered";
       await newMessage.save();
 
-      // send message to the receiver instanly
+      // emit the new message to the receiver in real time
       io.to(receiverSocketId).emit("newMessage", newMessage);
 
-      // send the delivery status back to sender
+      // emit the delivered status back to the sender
       const senderSocketId = getReceiverSocketId(senderId);
       if (senderSocketId) {
         io.to(senderSocketId).emit("messageDelivered", {
@@ -86,7 +86,6 @@ export async function sendMessage(req, res) {
         });
       }
     }
-
     res.status(201).json(newMessage);
   } catch (error) {
     console.log("Error in sendMessage controller", error.message);
