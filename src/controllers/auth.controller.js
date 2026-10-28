@@ -57,16 +57,17 @@ export async function signup(req, res) {
     if (user) {
       generateToken(user._id, res);
       res.status(201).json({
-        success: true,
-        message: "User signed up successfully",
-        user,
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        username: user.username,
       });
     } else {
-      res.status(400).json({ message: "Invalid user data" });
+      res.status(400).json({ error: "Invalid user data" });
     }
   } catch (error) {
     console.log("Error in signup controller", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 }
 
@@ -92,12 +93,14 @@ export async function login(req, res) {
     generateToken(user._id, res);
 
     return res.status(200).json({
-      success: true,
-      message: "User logged in successfully",
-      user,
+      id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      username: user.username,
     });
   } catch (error) {
     console.log(error.message);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 }
 
