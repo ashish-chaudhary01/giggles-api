@@ -5,7 +5,6 @@ import { protectRoute } from "../middlewares/protectRoute.js";
 const router = express.Router();
 router.use(protectRoute);
 
-// router.get("/search",protectRoute,searchUser);
 router.get("/chatUsers", messageControllers.getChatUsers);
 router.get("/:id", messageControllers.getMessagesByUserId);
 router.post("/send/:receiverId", messageControllers.sendMessage);
