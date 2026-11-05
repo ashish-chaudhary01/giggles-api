@@ -32,7 +32,7 @@ export async function signup(req, res) {
     }
 
     const existingUser = await userModel.find({
-      $or: [{ username }, { email }],
+      $or: [{ username: username.toLowerCase() }, { email }],
     });
 
     if (existingUser) {
@@ -49,7 +49,7 @@ export async function signup(req, res) {
     const hash = await bcrypt.hash(password, salt);
 
     const user = await userModel.create({
-      username,
+      username: username.toLowerCase(),
       email,
       password: hash,
       fullName,

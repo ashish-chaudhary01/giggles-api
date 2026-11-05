@@ -13,7 +13,7 @@ export async function searchUser(req, res) {
           },
         ],
       })
-      .select("fullName profilePic username email")
+      .select("-password")
       .limit(10);
 
     res.status(200).json(searchResults);
