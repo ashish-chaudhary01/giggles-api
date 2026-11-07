@@ -29,10 +29,6 @@ io.on("connection", (socket) => {
     userSocketMap[userId] = socket.id;
   }
 
-  console.log("Connected user:", userId);
-
-  console.log("Online users before emit:", Object.keys(userSocketMap));
-
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   // send event to all connected users/clients
@@ -41,7 +37,13 @@ io.on("connection", (socket) => {
   // on user disconnect
   socket.on("disconnect", () => {
     // remove user from the online user object
-    delete userSocketMap[userId];
+    socket.on("disconnect", () => {
+      if (userSocketMap[userId] === socket.id) {
+        delete userSocketMap[userId];
+      }
+
+      io.emit("getOnlineUsers", Object.keys(userSocketMap));
+    });
     // send the event to all connected user again
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
