@@ -118,8 +118,10 @@ export async function logout(req, res) {
 
 export async function updateProfile(req, res) {
   try {
-    const { fullName, username, profilePic, bio } = req.body;
+    const { fullName, username, profilePic, bio, email } = req.body;
     const userId = req.user._id;
+
+    const user = await userModel.findById(userId);
 
     let updateData = {};
 
@@ -129,15 +131,30 @@ export async function updateProfile(req, res) {
     if (bio) {
       updateData.bio = bio;
     }
-    if (username) {
-      // check if the username already exist
-      const existingUser = await userModel.findOne({ username: username });
+    if (email) {
+      if (email !== user.email) {
+        // check if the email already exist
+        const existingUser = await userModel.findOne({ email: email });
 
-      if (existingUser) {
-        return res.status(409).json({ message: "Username already exist!" });
+        if (existingUser) {
+          return res.status(409).json({ message: "email already exist!" });
+        }
+        updateData.email = email;
       }
+    }
+    if (username) {
+      // if same then do not update
+      // if not same first check if it is already exist or not
+      if (username !== user.username) {
+        // check if the username already exist
+        const existingUser = await userModel.findOne({ username: username });
 
-      updateData.username = username;
+        if (existingUser) {
+          return res.status(409).json({ message: "Username already exist!" });
+        }
+
+        updateData.username = username;
+      }
     }
 
     if (profilePic) {
@@ -150,7 +167,13 @@ export async function updateProfile(req, res) {
       runValidators: true,
     });
 
-    res.status(200).json(updatedUser);
+    res.status(200).json({
+      fullName: updatedUser.fullName,
+      email: updatedUser.email,
+      bio: updatedUser.bio,
+      username: updatedUser.username,
+      profilePic: updatedUser.profilePic,
+    });
   } catch (error) {
     console.log("Error in updateProfile controller");
     res.status(500).json({ error: "Internal server error" });
