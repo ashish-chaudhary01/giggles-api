@@ -29,6 +29,12 @@ io.on("connection", (socket) => {
     userSocketMap[userId] = socket.id;
   }
 
+  console.log("Connected user:", userId);
+
+  console.log("Online users before emit:", Object.keys(userSocketMap));
+
+  io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
   // send event to all connected users/clients
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
