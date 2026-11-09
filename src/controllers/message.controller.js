@@ -36,6 +36,17 @@ export async function getChatUsers(req, res) {
   }
 }
 
+export async function fetchUserForChatListUpdate(req, res) {
+  try {
+    const { userId } = req.params;
+    const user = await userModel.findById(userId);
+    res.status(200).json(user);
+  } catch (error) {
+    console.log("Error in fetchUserForChatListUpdate", error.message);
+    res.status(500).json("Internal server error");
+  }
+}
+
 export async function getMessagesByUserId(req, res) {
   try {
     const { id: receiverId } = req.params;
@@ -80,6 +91,10 @@ export async function sendMessage(req, res) {
       // mark the status as delivered
       newMessage.status = "delivered";
       await newMessage.save();
+
+      // send event to receiver for updating his chatList
+      const sender = await userModel.findById(senderId).select("-password");
+      io.to(receiverSocketId).emit("updateChatList", sender);
 
       // emit the new message to the receiver in real time
       io.to(receiverSocketId).emit("newMessage", newMessage);
