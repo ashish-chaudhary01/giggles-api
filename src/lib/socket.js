@@ -2,6 +2,7 @@ import express from "express";
 import http from "http";
 import { Server } from "socket.io";
 import config from "../config/config.js";
+import messageModel from "../models/message.model.js";
 
 const app = express();
 
@@ -21,7 +22,8 @@ export function getReceiverSocketId(userId) {
   return userSocketMap[userId];
 }
 
-io.on("connection", (socket) => {
+// socket connection
+io.on("connection", async (socket) => {
   // get the user id from the query parameter sended from the frontend
   const userId = socket.handshake.query.userId;
 
@@ -29,10 +31,39 @@ io.on("connection", (socket) => {
     userSocketMap[userId] = socket.id;
   }
 
-  io.emit("getOnlineUsers", Object.keys(userSocketMap));
-
   // send event to all connected users/clients
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
+  // now whenever the user comes online mark the every pending message status as delivered
+  // and if the senders are online marks the status in real time with event
+  try {
+    const pendingMessages = await messageModel
+      .find({ receiverId: userId, status: { $eq: "sent" } })
+      .select("_id senderId");
+
+    // now iterate to every message,update the status and send the event
+    for (const message of pendingMessages) {
+      const deliveredMessage = await messageModel.findOneAndUpdate(
+        { _id: message._id, status: "sent" },
+        { $set: { status: "delivered" } },
+        { new: true },
+      );
+
+      const senderSocketId = getReceiverSocketId(
+        deliveredMessage.senderId.toString(),
+      );
+
+      if (senderSocketId) {
+        // means sender is online and emit the event
+        io.to(senderSocketId).emit("messageStatusUpdated", {
+          messageId: deliveredMessage._id.toString(),
+          status: "delivered",
+        });
+      }
+    }
+  } catch (error) {
+    console.log("Error in syncing messages", error);
+  }
 
   // on user disconnect
   // remove user from the online user object
@@ -41,10 +72,9 @@ io.on("connection", (socket) => {
       delete userSocketMap[userId];
     }
 
+    // send the event to all connected user again
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
-  // send the event to all connected user again
-  io.emit("getOnlineUsers", Object.keys(userSocketMap));
 });
 
 export { io, app, server };

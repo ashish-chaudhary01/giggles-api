@@ -36,27 +36,30 @@ export async function getChatUsers(req, res) {
   }
 }
 
-export async function fetchUserForChatListUpdate(req, res) {
-  try {
-    const { userId } = req.params;
-    const user = await userModel.findById(userId);
-    res.status(200).json(user);
-  } catch (error) {
-    console.log("Error in fetchUserForChatListUpdate", error.message);
-    res.status(500).json("Internal server error");
-  }
-}
-
 export async function getMessagesByUserId(req, res) {
   try {
-    const { id: receiverId } = req.params;
-    const senderId = req.user._id;
+    const { id: receiverId } = req.params; // id of the person whom i am chatting with
+    const senderId = req.user._id; // my Id
+
+    // update the all messages status to seen that is sent by the receiver and received by the sender(me)
+    await messageModel.updateMany(
+      {
+        senderId: receiverId,
+        receiverId: senderId,
+        status: { $ne: "seen" },
+      },
+      {
+        $set: { status: "seen" },
+      },
+    );
+
     const messages = await messageModel.find({
       $or: [
         { senderId: senderId, receiverId: receiverId },
         { senderId: receiverId, receiverId: senderId },
       ],
     });
+
     res.status(200).json(messages);
   } catch (error) {
     console.log("Error in getMessageByUserId controller", error.message);
@@ -98,15 +101,6 @@ export async function sendMessage(req, res) {
 
       // emit the new message to the receiver in real time
       io.to(receiverSocketId).emit("newMessage", newMessage);
-
-      // emit the delivered status back to the sender
-      const senderSocketId = getReceiverSocketId(senderId);
-      if (senderSocketId) {
-        io.to(senderSocketId).emit("messageDelivered", {
-          messageId: newMessage._id,
-          status: "delivered",
-        });
-      }
     }
     res.status(201).json(newMessage);
   } catch (error) {
