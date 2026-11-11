@@ -65,6 +65,26 @@ io.on("connection", async (socket) => {
     console.log("Error in syncing messages", error);
   }
 
+  // if receiver is in the chat and sees the new message mark the status seen
+  // listen for message seen event from the receiver
+  socket.on("markMessageSeen", async (data) => {
+    const message = await messageModel.findByIdAndUpdate(
+      { _id: data.messageId },
+      {
+        $set: { status: "seen" },
+      },
+    );
+
+    const senderSocketId = getReceiverSocketId(message.senderId.toString());
+
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messageSeen", {
+        messageId: message._id.toString(),
+        status: "seen",
+      });
+    }
+  });
+
   // on user disconnect
   // remove user from the online user object
   socket.on("disconnect", () => {

@@ -41,17 +41,37 @@ export async function getMessagesByUserId(req, res) {
     const { id: receiverId } = req.params; // id of the person whom i am chatting with
     const senderId = req.user._id; // my Id
 
-    // update the all messages status to seen that is sent by the receiver and received by the sender(me)
-    await messageModel.updateMany(
-      {
-        senderId: receiverId,
-        receiverId: senderId,
-        status: { $ne: "seen" },
-      },
-      {
-        $set: { status: "seen" },
-      },
-    );
+    // update the status for all messages in real time where the sender is receiver and receiver is sender
+    // this is all the messages to be update
+    // with every message updation emit an event of message seen
+    const messagesToUpdateStatus = await messageModel.find({
+      receiverId: senderId,
+      senderId: receiverId,
+      status: { $ne: "seen" },
+    });
+
+    for (const msg of messagesToUpdateStatus) {
+      const updatedMessage = await messageModel.findOneAndUpdate(
+        {
+          _id: msg._id,
+        },
+        {
+          $set: { status: "seen" },
+        },
+      );
+
+      // get the Socketid of the sender to emit seen event to him
+      const senderSocketId = getReceiverSocketId(
+        updatedMessage.senderId.toString(),
+      );
+
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("messageSeen", {
+          messageId: updatedMessage._id.toString(),
+          status: "seen",
+        });
+      }
+    }
 
     const messages = await messageModel.find({
       $or: [
