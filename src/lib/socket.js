@@ -3,6 +3,7 @@ import http from "http";
 import { Server } from "socket.io";
 import config from "../config/config.js";
 import messageModel from "../models/message.model.js";
+import userModel from "../models/user.model.js";
 
 const app = express();
 
@@ -87,8 +88,30 @@ io.on("connection", async (socket) => {
 
   // on user disconnect
   // remove user from the online user object
-  socket.on("disconnect", () => {
-    if (userSocketMap[userId] === socket.id) {
+  // and update its last seen
+  socket.on("disconnect", async () => {
+    // if (userSocketMap[userId] === socket.id) {
+    //   const user = await userModel.findById(userId);
+    //   user.lastSeenAt = new Date();
+    //   await user.save();
+    const userId = Object.keys(userSocketMap).find(
+      (id) => userSocketMap[id] === socket.id,
+    );
+
+    if (userId) {
+      const user = await userModel.findByIdAndUpdate(
+        userId,
+        {
+          lastSeenAt: new Date(),
+        },
+        { new: true },
+      );
+
+      io.emit("userOffline", {
+        userId: userId.toString(),
+        lastSeenAt: user.lastSeenAt,
+      });
+
       delete userSocketMap[userId];
     }
 

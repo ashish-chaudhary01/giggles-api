@@ -5,29 +5,39 @@ import userModel from "../models/user.model.js";
 
 export async function getChatUsers(req, res) {
   try {
-    const loggedInUserId = req.user._id;
+    const loggedInUserId = req.user._id.toString();
 
     // get all messages of the logged in user
-    const messages = await messageModel.find({
-      $or: [{ receiverId: loggedInUserId }, { senderId: loggedInUserId }],
-    });
-
-    // get all users id you chatted with only once no duplicate
-    const chatUsersId = [
-      ...new Set(
-        messages.map((msg) =>
-          msg.senderId.toString() === loggedInUserId.toString()
-            ? msg.receiverId.toString()
-            : msg.senderId.toString(),
-        ),
-      ),
-    ];
-
-    const chatUsers = await userModel
+    // sort it in descending so the new one is first
+    const messages = await messageModel
       .find({
-        _id: { $in: chatUsersId },
+        $or: [{ receiverId: loggedInUserId }, { senderId: loggedInUserId }],
       })
+      .sort({ createdAt: -1 });
+
+    const chatUsersMap = {}; // {userId : lastMessage}
+
+    // get user last message
+    for (const msg of messages) {
+      const senderId = msg.senderId.toString();
+      const receiverId = msg.receiverId.toString();
+      const otherUserId = senderId === loggedInUserId ? receiverId : senderId;
+      if (otherUserId !== loggedInUserId && !chatUsersMap[otherUserId]) {
+        chatUsersMap[otherUserId] = msg;
+      }
+    }
+
+    const userIds = Object.keys(chatUsersMap);
+
+    const users = await userModel
+      .find({ _id: { $in: userIds } })
       .select("-password");
+
+    // all chatUsers(sidebar users) with their last messages
+    const chatUsers = users.map((user) => ({
+      user,
+      lastMessage: chatUsersMap[user._id.toString()],
+    }));
 
     res.status(200).json(chatUsers);
   } catch (error) {
@@ -117,7 +127,10 @@ export async function sendMessage(req, res) {
 
       // send event to receiver for updating his chatList
       const sender = await userModel.findById(senderId).select("-password");
-      io.to(receiverSocketId).emit("updateChatList", sender);
+      io.to(receiverSocketId).emit("updateChatList", {
+        user: sender,
+        lastMessage: newMessage,
+      });
 
       // emit the new message to the receiver in real time
       io.to(receiverSocketId).emit("newMessage", newMessage);
