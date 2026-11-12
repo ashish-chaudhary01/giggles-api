@@ -141,3 +141,27 @@ export async function sendMessage(req, res) {
     res.status(500).json({ error: "Internal server error" });
   }
 }
+
+export async function deleteMessages(req, res) {
+  try {
+    const { receiverId: otherUserId } = req.params;
+    const myId = req.user._id;
+
+    await messageModel.deleteMany({
+      $or: [
+        { receiverId: otherUserId, senderId: myId },
+        { senderId: otherUserId, receiverId: myId },
+      ],
+    });
+    const otherUserSocketId = getReceiverSocketId(otherUserId.toString());
+    if (otherUserSocketId) {
+      io.to(otherUserSocketId).emit("chatDeleted", {
+        userId: myId,
+      });
+    }
+    res.status(200).json({ message: "Messages deleted from both sides" });
+  } catch (error) {
+    console.log("Error in deleteMessages controller", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
