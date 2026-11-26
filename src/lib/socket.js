@@ -86,6 +86,22 @@ io.on("connection", async (socket) => {
     }
   });
 
+  socket.on("typing:start", (data) => {
+    const receiverSocketId = getReceiverSocketId(data.receiverId.toString());
+    io.to(receiverSocketId).emit("userTyping", {
+      typingUserId: userId,
+      status: "typing",
+    });
+  });
+
+  socket.on("typing:stop", (data) => {
+    const receiverSocketId = getReceiverSocketId(data.receiverId.toString());
+    io.to(receiverSocketId).emit("userStoppedTyping", {
+      typingUserId: userId,
+      status: "typingStopped",
+    });
+  });
+
   // on user disconnect
   // remove user from the online user object
   // and update its last seen
